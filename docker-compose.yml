@@ -1,0 +1,50 @@
+#version: '3.1'
+services:
+  mongo:
+    image: mongo
+    volumes:
+      - ./data/mongodb:/data/db
+    ports:
+      - 27017:27017
+
+  mongo-express:
+    image: mongo-express
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: root
+      ME_CONFIG_MONGODB_ADMINPASSWORD: example
+    depends_on:
+      - "mongo"
+    ports:
+      - 8081:8081
+
+  redis:
+    image: "redis:alpine"
+    volumes:
+      - ./data/redis:/data
+    ports:
+      - 6379:6379
+
+
+  redis-commander:
+    image: "rediscommander/redis-commander:latest"
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+      - PORT=8082
+    ports:
+      - 8082:8082
+    depends_on:
+      - "redis"
+
+  #dart-api:
+    #restart: on-failure
+    #hostname: hostname
+    #build:
+      #context: .
+    #environment:
+      #- ISSUER=scientisst.com
+      #- SECRET_KEY=tRLLt6taiafkxFqur0tY+69PQ2aKoT8JxmjkKmOG5cs=
+      #- CLIENT_ID=C6E59B29AD6D84B0E4EBFB036DE75E1D
+      #- CLIENT_SECRET=V2Z2pAtFaaD7LtUhtGbBNA5+iKCj1fw+2m+m6XUh7TY=
+    #depends_on:
+      #- "mongo"
+      #- "redis"
