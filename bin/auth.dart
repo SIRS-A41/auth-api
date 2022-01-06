@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import '../lib/server.dart';
+import 'package:auth_api/server.dart';
 
 const SECRET = Env.secretKey;
 const ISSUER = Env.issuer;
@@ -8,18 +8,14 @@ const CLIENT_ID = Env.clientId;
 const CLIENT_SECRET = Env.clientSecret;
 
 late HttpServer server;
-late Mongo mongo;
-late TokenService tokenService;
+late Redis redis;
 late Router app;
 late String clientBase64;
 
 void main(List<String> arguments) async {
-  mongo = Mongo('mongodb://localhost:27017');
-  await mongo.init();
-
   print(ISSUER);
-  tokenService = TokenService(secret: SECRET, issuer: ISSUER);
-  await tokenService.start('localhost', 6379);
+  redis = Redis(secret: SECRET, issuer: ISSUER);
+  await redis.start('localhost', 6379);
   print('Token Service running...');
 
   var bytes = utf8.encode('$CLIENT_ID:$CLIENT_SECRET');
@@ -37,8 +33,7 @@ void main(List<String> arguments) async {
   server = await serve(
     handler,
     InternetAddress.anyIPv4,
-    8080,
-    //securityContext: SecurityContext.defaultContext,
+    8000,
   );
   // Enable content compression
   server.autoCompress = true;
@@ -50,14 +45,11 @@ void setupRequests() {
   app.mount(
       '/auth/',
       AuthApi(
-        mongo: mongo,
         secret: SECRET,
         issuer: ISSUER,
-        tokenService: tokenService,
+        redis: redis,
         clientBase64: clientBase64,
       ).router);
-  app.mount('/user/', UserApi(mongo: mongo).router);
-  app.mount('/db/', DbApi(mongo: mongo).router);
 
   app.get(
     '/hello',

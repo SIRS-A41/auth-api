@@ -68,6 +68,8 @@ JWT? verifyJwt(String token, String secret) {
     // JWT package bug?
     if (e.message.contains('expired')) {
       throw JWTExpiredError();
+    } else if (e.message.contains('invalid')) {
+      throw JWTInvalidError(e.message.split(': ').last);
     }
     rethrow;
   }
@@ -91,8 +93,7 @@ Middleware handleAuth(String secret) {
           } on JWTInvalidError {
             return Response(HttpStatus.badRequest,
                 body: 'Refresh token is not valid');
-          } on JWTError catch (e) {
-            print(e);
+          } on JWTError {
             return Response.internalServerError(
                 body: 'Failed to verify access token.');
           }

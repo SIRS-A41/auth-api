@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'token_pair.dart';
 import 'package:redis_dart/redis_dart.dart';
 
@@ -7,14 +9,15 @@ import 'package:uuid/uuid.dart';
 const ACCESS_TOKEN_EXPIRY = Duration(minutes: 30);
 const REFRESH_TOKEN_EXPIRY = Duration(days: 365);
 
-class TokenService {
-  TokenService({required this.secret, required this.issuer});
+class Redis {
+  Redis({required this.secret, required this.issuer});
 
   late RedisClient _db;
   final String secret;
   final String issuer;
 
-  final String _prefix = 'token';
+  final String _tokenPrefix = 'tokens';
+  final String _userPrefix = 'users';
 
   Future<void> start(String host, int port) async {
     _db = await RedisClient.connect(host, port);
@@ -53,15 +56,45 @@ class TokenService {
   }
 
   Future<void> addRefreshToken(String id, String token, Duration expiry) async {
-    await _db.set('$_prefix:$id', token);
-    await _db.expire('$_prefix:$id', expiry);
+    await _db.set('$_tokenPrefix:$id', token);
+    await _db.expire('$_tokenPrefix:$id', expiry);
   }
 
   Future<dynamic> getRefreshToken(String id) async {
-    return (await _db.get('$_prefix:$id')).value;
+    return (await _db.get('$_tokenPrefix:$id')).value;
   }
 
   Future<void> removeRefreshToken(String id) async {
-    await _db.delete('$_prefix:$id');
+    await _db.delete('$_tokenPrefix:$id');
+  }
+
+  Future<bool> hasUser(String email) async {
+    return (await _db.exists('$_userPrefix:$email')).value;
+  }
+
+  Future<void> newUser(String email, String password) async {
+    final salt = generateSalt();
+    final hashedPassword = hashPassword(password, salt);
+    await _db.set(
+      '$_userPrefix:$email',
+      jsonEncode({
+        'password': hashedPassword,
+        'salt': salt,
+      }),
+    );
+  }
+
+  Future<String?> login(String email, String password) async {
+    final data = (await _db.get('$_userPrefix:$email')).value;
+    if (data == null) return null;
+
+    final user = jsonDecode(data);
+
+    final hashedPassword = hashPassword(password, user['salt']);
+
+    if (hashedPassword != user['password']) {
+      return null;
+    }
+    return email;
   }
 }

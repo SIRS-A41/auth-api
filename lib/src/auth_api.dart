@@ -10,17 +10,15 @@ import 'utils.dart';
 
 class AuthApi {
   AuthApi({
-    required this.mongo,
     required this.secret,
     required this.issuer,
-    required this.tokenService,
+    required this.redis,
     required this.clientBase64,
   });
 
-  final Mongo mongo;
   final String secret;
   final String issuer;
-  final TokenService tokenService;
+  final Redis redis;
   final String clientBase64;
 
   Router get router {
@@ -59,12 +57,12 @@ class AuthApi {
       }
 
       // Ensure email is unique
-      if (await mongo.hasUser(email)) {
+      if (await redis.hasUser(email)) {
         return Response(HttpStatus.badRequest, body: 'User already exists.');
       }
 
       // Create user
-      await mongo.newUser(email, password);
+      await redis.newUser(email, password);
 
       return Response.ok('Successfully registered user.');
     });
@@ -97,7 +95,7 @@ class AuthApi {
             body: 'Please provide your email and password.');
       }
 
-      final userId = await mongo.login(email, password);
+      final userId = await redis.login(email, password);
       if (userId == null) {
         return Response(HttpStatus.badRequest,
             body: 'Incorrect user and/or password.');
@@ -106,7 +104,7 @@ class AuthApi {
           '${DateTime.now().toIso8601String()}\tuser: $userId\tmethod: ${req.method}\turl: ${req.requestedUri}');
 
       try {
-        final tokenPair = await tokenService.generateTokenPair(userId);
+        final tokenPair = await redis.generateTokenPair(userId);
         return Response.ok(json.encode(tokenPair.toJson()), headers: {
           HttpHeaders.contentTypeHeader: ContentType.json.mimeType,
         });
@@ -131,7 +129,7 @@ class AuthApi {
             '${DateTime.now().toIso8601String()}\tuser: $userId\tmethod: ${req.method}\turl: ${req.requestedUri}');
 
         if (jwtId != null) {
-          await tokenService.removeRefreshToken(jwtId);
+          await redis.removeRefreshToken(jwtId);
         } else {
           throw Exception('jwtId is null');
         }
@@ -141,6 +139,18 @@ class AuthApi {
       }
 
       return Response.ok('Successfully logged out.');
+    });
+
+    router.get('/validate', (Request req) async {
+      final userId = req.context['userId'] as String?;
+      if (req.context['authDetails'] == null || userId == null) {
+        return Response.forbidden('Not authorized to perform this action. 2');
+      }
+      if (await redis.hasUser(userId)) {
+        return Response.ok(userId);
+      } else {
+        return Response.forbidden('Not authorized to perform this action. 3');
+      }
     });
 
     router.post('/accessToken', (Request req) async {
@@ -180,7 +190,7 @@ class AuthApi {
               body: 'Refresh token is not valid.');
         }
 
-        final dbToken = await tokenService.getRefreshToken(tokenId);
+        final dbToken = await redis.getRefreshToken(tokenId);
         if (dbToken == null) {
           return Response(HttpStatus.badRequest,
               body: 'Refresh token is not recognized');
@@ -202,7 +212,7 @@ class AuthApi {
           final expiryDate = DateTime.fromMillisecondsSinceEpoch(
               (1000 * refreshToken.payload['exp']).round());
 
-          final tokenPair = await tokenService.refreshAccessToken(
+          final tokenPair = await redis.refreshAccessToken(
               refreshToken.subject!, refreshToken.jwtId!, expiryDate);
 
           return Response.ok(
