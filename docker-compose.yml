@@ -17,17 +17,3 @@ services:
       - 8082:8082
     depends_on:
       - "redis"
-
-  #dart-api:
-    #restart: on-failure
-    #hostname: hostname
-    #build:
-      #context: .
-    #environment:
-      #- ISSUER=scientisst.com
-      #- SECRET_KEY=tRLLt6taiafkxFqur0tY+69PQ2aKoT8JxmjkKmOG5cs=
-      #- CLIENT_ID=C6E59B29AD6D84B0E4EBFB036DE75E1D
-      #- CLIENT_SECRET=V2Z2pAtFaaD7LtUhtGbBNA5+iKCj1fw+2m+m6XUh7TY=
-    #depends_on:
-      #- "mongo"
-      #- "redis"
