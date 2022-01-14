@@ -115,30 +115,63 @@ class AuthApi {
     });
 
     router.post('/logout', (Request req) async {
-      final auth = req.context['authDetails'];
-      if (auth == null) {
-        return Response(HttpStatus.unauthorized,
-            body: 'Not authorized to perform this operation.');
+      // verify client_id and client_secret
+      final _clientBase64 = req.context['authDetails'];
+      if (_clientBase64 == null) {
+        return Response(HttpStatus.badRequest,
+            body: 'Provide client_id and client_secret.');
+      }
+      if (_clientBase64 != clientBase64) {
+        return Response.forbidden('Incorrect client_id and/or client_secret.');
       }
 
+      final payload = await req.readAsString();
+      if (payload.isEmpty) {
+        return Response(HttpStatus.badRequest,
+            body: 'Please provide a refresh_token.');
+      }
+      final Map<String, dynamic> payloadMap = json.decode(payload);
+      if (!payloadMap.containsKey('refresh_token')) {
+        return Response(HttpStatus.badRequest,
+            body: 'Please provide a refresh_token.');
+      }
+
+      final token = payloadMap['refresh_token'];
+      // Validate token
       try {
-        final jwt = (auth as JWT);
-        final jwtId = jwt.jwtId;
-        final userId = jwt.subject;
+        final refreshToken = verifyJwt(token, secret);
+
+        final tokenId = refreshToken?.jwtId;
+        final userId = refreshToken?.subject;
         print(
             '${DateTime.now().toIso8601String()}\tuser: $userId\tmethod: ${req.method}\turl: ${req.requestedUri}');
 
-        if (jwtId != null) {
-          await redis.removeRefreshToken(jwtId);
-        } else {
-          throw Exception('jwtId is null');
+        if (refreshToken == null || tokenId == null) {
+          return Response(HttpStatus.badRequest,
+              body: 'Refresh token is not valid.');
         }
-      } catch (e) {
-        return Response.internalServerError(
-            body: 'There was an issue loggin out. Please check and try again.');
-      }
 
-      return Response.ok('Successfully logged out.');
+        final dbToken = await redis.getRefreshToken(tokenId);
+        if (dbToken == null) {
+          return Response(HttpStatus.badRequest,
+              body: 'Refresh token is not recognized');
+        }
+
+        // delete refresh token
+        await redis.removeRefreshToken(tokenId);
+
+        return Response.ok('Successfully logged out');
+      } on JWTExpiredError {
+        return Response(HttpStatus.badRequest,
+            body: 'The refresh token has expired.');
+      } on JWTInvalidError {
+        return Response(HttpStatus.badRequest,
+            body: 'Refresh token is not valid');
+      } on JWTError catch (e) {
+        print(e);
+        return Response.internalServerError(
+            body: 'Failed to verify refresh token.');
+      }
     });
 
     router.get('/validate', (Request req) async {
