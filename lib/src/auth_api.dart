@@ -1,12 +1,8 @@
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:dart_jsonwebtoken/dart_jsonwebtoken.dart';
-import 'package:shelf/shelf.dart';
-import 'package:shelf_router/shelf_router.dart';
 
 import '../server.dart';
-import 'utils.dart';
 
 class AuthApi {
   AuthApi({
@@ -174,9 +170,45 @@ class AuthApi {
       }
     });
 
-    router.get('/validate', (Request req) async {
-      final userId = req.context['userId'] as String?;
-      if (req.context['authDetails'] == null || userId == null) {
+    router.post('/validate', (Request req) async {
+      // verify client_id and client_secret
+      final _clientBase64 = req.context['authDetails'];
+      if (_clientBase64 == null) {
+        return Response(HttpStatus.badRequest,
+            body: 'Provide client_id and client_secret.');
+      }
+      if (_clientBase64 != clientBase64) {
+        return Response.forbidden('Incorrect client_id and/or client_secret.');
+      }
+
+      final payload = await req.readAsString();
+      if (payload.isEmpty) {
+        return Response(HttpStatus.badRequest,
+            body: 'Please provide an access_token.');
+      }
+      final Map<String, dynamic> payloadMap = json.decode(payload);
+      if (!payloadMap.containsKey('access_token')) {
+        return Response(HttpStatus.badRequest,
+            body: 'Please provide a access_token.');
+      }
+
+      final token = payloadMap['access_token'];
+      var jwt;
+      // Validate token
+      try {
+        jwt = verifyJwt(token, secret);
+      } on JWTExpiredError {
+        return Response.forbidden('The access token has expired.');
+      } on JWTInvalidError {
+        return Response(HttpStatus.badRequest,
+            body: 'Refresh token is not valid');
+      } on JWTError {
+        return Response.internalServerError(
+            body: 'Failed to verify access token.');
+      }
+
+      final userId = jwt.subject;
+      if (userId == null) {
         return Response.forbidden('Not authorized to perform this action. 2');
       }
       if (await redis.hasUser(userId)) {

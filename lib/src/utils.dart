@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'dart:math';
 
 import 'package:mongo_dart/mongo_dart.dart';
-import 'package:shelf/shelf.dart';
 import 'package:crypto/crypto.dart';
 import 'package:dart_jsonwebtoken/dart_jsonwebtoken.dart';
 
@@ -79,30 +78,14 @@ Middleware handleAuth(String secret) {
   return (Handler innerHandler) {
     return (Request request) async {
       final authHeader = request.headers['Authorization'];
-      var token, jwt, client;
+      var client;
 
       if (authHeader != null) {
-        if (authHeader.startsWith('Bearer ')) {
-          token = authHeader.substring(7);
-
-          // Validate token
-          try {
-            jwt = verifyJwt(token, secret);
-          } on JWTExpiredError {
-            return Response.forbidden('The access token has expired.');
-          } on JWTInvalidError {
-            return Response(HttpStatus.badRequest,
-                body: 'Refresh token is not valid');
-          } on JWTError {
-            return Response.internalServerError(
-                body: 'Failed to verify access token.');
-          }
-        } else if (authHeader.startsWith('Basic ')) {
+        if (authHeader.startsWith('Basic ')) {
           client = authHeader.substring(6);
         }
         final updatedRequest = request.change(context: {
-          'authDetails': jwt ?? client,
-          'userId': jwt?.subject,
+          'authDetails': client,
         });
         return await innerHandler(updatedRequest);
       } else {
