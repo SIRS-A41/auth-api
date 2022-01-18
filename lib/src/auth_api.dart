@@ -34,31 +34,31 @@ class AuthApi {
       final payload = await req.readAsString();
       if (payload.isEmpty) {
         return Response(HttpStatus.badRequest,
-            body: 'Please provide your email and password as body.');
+            body: 'Please provide your username and password as body.');
       }
       final userInfo = json.decode(payload);
-      final email = userInfo['email'];
+      final username = userInfo['username'];
       final password = userInfo['password'];
 
       print(
-          '${DateTime.now().toIso8601String()}\temail: $email\tmethod: ${req.method}\turl: ${req.requestedUri}');
+          '${DateTime.now().toIso8601String()}\tusername: $username\tmethod: ${req.method}\turl: ${req.requestedUri}');
 
-      // Ensure email and password fields are present
-      if (email == null ||
-          email.isEmpty ||
+      // Ensure username and password fields are present
+      if (username == null ||
+          username.isEmpty ||
           password == null ||
           password.isEmpty) {
         return Response(HttpStatus.badRequest,
-            body: 'Please make sure that email and password are not empty.');
+            body: 'Please make sure that username and password are not empty.');
       }
 
-      // Ensure email is unique
-      if (await redis.hasUser(email)) {
+      // Ensure username is unique
+      if (await redis.hasUser(username)) {
         return Response(HttpStatus.badRequest, body: 'User already exists.');
       }
 
       // Create user
-      await redis.newUser(email, password);
+      await redis.newUser(username, password);
 
       return Response.ok('Successfully registered user.');
     });
@@ -77,21 +77,21 @@ class AuthApi {
       final payload = await req.readAsString();
       if (payload.isEmpty) {
         return Response(HttpStatus.badRequest,
-            body: 'Please provide your email and password as body.');
+            body: 'Please provide your username and password as body.');
       }
       final userInfo = json.decode(payload);
-      final email = userInfo['email'];
+      final username = userInfo['username'];
       final password = userInfo['password'];
-      // Ensure email and password fields are present
-      if (email == null ||
-          email.isEmpty ||
+      // Ensure username and password fields are present
+      if (username == null ||
+          username.isEmpty ||
           password == null ||
           password.isEmpty) {
         return Response(HttpStatus.badRequest,
-            body: 'Please provide your email and password.');
+            body: 'Please provide your username and password.');
       }
 
-      final userId = await redis.login(email, password);
+      final userId = await redis.login(username, password);
       if (userId == null) {
         return Response(HttpStatus.badRequest,
             body: 'Incorrect user and/or password.');

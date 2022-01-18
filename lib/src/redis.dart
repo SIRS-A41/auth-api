@@ -68,15 +68,15 @@ class Redis {
     await _db.delete('$_tokenPrefix:$id');
   }
 
-  Future<bool> hasUser(String email) async {
-    return (await _db.exists('$_userPrefix:$email')).value;
+  Future<bool> hasUser(String username) async {
+    return (await _db.exists('$_userPrefix:$username')).value;
   }
 
-  Future<void> newUser(String email, String password) async {
+  Future<void> newUser(String username, String password) async {
     final salt = generateSalt();
     final hashedPassword = hashPassword(password, salt);
     await _db.set(
-      '$_userPrefix:$email',
+      '$_userPrefix:$username',
       jsonEncode({
         'password': hashedPassword,
         'salt': salt,
@@ -84,8 +84,8 @@ class Redis {
     );
   }
 
-  Future<String?> login(String email, String password) async {
-    final data = (await _db.get('$_userPrefix:$email')).value;
+  Future<String?> login(String username, String password) async {
+    final data = (await _db.get('$_userPrefix:$username')).value;
     if (data == null) return null;
 
     final user = jsonDecode(data);
@@ -95,6 +95,6 @@ class Redis {
     if (hashedPassword != user['password']) {
       return null;
     }
-    return email;
+    return username;
   }
 }
