@@ -8,8 +8,10 @@ const CLIENT_ID = Env.clientId;
 const CLIENT_SECRET = Env.clientSecret;
 
 late HttpServer server;
+late HttpServer serverLocal;
 late Redis redis;
 late Router app;
+late Router appLocal;
 late String clientBase64;
 
 void main(List<String> arguments) async {
@@ -22,7 +24,9 @@ void main(List<String> arguments) async {
   clientBase64 = base64.encode(bytes);
 
   app = Router();
+  appLocal = Router();
   setupRequests();
+  setupLocalRequests();
 
   final handler = Pipeline()
       .addMiddleware(logRequests())
@@ -30,6 +34,13 @@ void main(List<String> arguments) async {
       .addMiddleware(handleAuth(SECRET))
       .addMiddleware(logUserRequests())
       .addHandler(app);
+  final handlerLocal = Pipeline()
+      .addMiddleware(logRequests())
+      .addMiddleware(handleCors())
+      .addMiddleware(handleAuth(SECRET))
+      .addMiddleware(logUserRequests())
+      .addHandler(appLocal);
+
   server = await serve(
     handler,
     InternetAddress.anyIPv4,
@@ -39,6 +50,15 @@ void main(List<String> arguments) async {
   server.autoCompress = true;
 
   print('Serving at http://${server.address.host}:${server.port}');
+
+  serverLocal = await serve(
+    handlerLocal,
+    InternetAddress.anyIPv4,
+    8080,
+  );
+  serverLocal.autoCompress = true;
+  print(
+      'Locally serving at http://${serverLocal.address.host}:${serverLocal.port}');
 }
 
 void setupRequests() {
@@ -50,11 +70,15 @@ void setupRequests() {
         redis: redis,
         clientBase64: clientBase64,
       ).router);
+}
 
-  app.get(
-    '/hello',
-    (Request request) async {
-      return Response.ok('world');
-    },
-  );
+void setupLocalRequests() {
+  appLocal.mount(
+      '/auth/',
+      AuthLocalApi(
+        secret: SECRET,
+        issuer: ISSUER,
+        redis: redis,
+        clientBase64: clientBase64,
+      ).router);
 }

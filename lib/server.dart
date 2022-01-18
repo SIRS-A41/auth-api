@@ -2,6 +2,7 @@ export 'src/config.dart';
 export 'src/utils.dart';
 export 'src/redis.dart';
 export 'src/auth_api.dart';
+export 'src/auth_local_api.dart';
 
 export 'dart:io';
 export 'package:shelf/shelf.dart';
