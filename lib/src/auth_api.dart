@@ -214,6 +214,7 @@ class AuthApi {
         }
 
         // Generate new token pair - refresh access token
+        // also updates refresh token so relay attacks are avoided
         try {
           if (refreshToken.subject == null || refreshToken.payload == null) {
             return Response(HttpStatus.badRequest,
