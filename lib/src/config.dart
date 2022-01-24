@@ -8,4 +8,5 @@ abstract class Env {
   static const issuer = _Env.issuer;
   static const clientId = _Env.clientId;
   static const clientSecret = _Env.clientSecret;
+  static const redisIp = _Env.redisIp;
 }
