@@ -8,8 +8,9 @@ build/
 # Directory created by dartdoc
 doc/api/
 
-*.env
 config.g.dart
 
 data/mongodb/*
 data/redis/*
+
+certificates
