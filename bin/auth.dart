@@ -76,7 +76,7 @@ void main(List<String> arguments) async {
     InternetAddress.anyIPv4,
     // 8080,
     8445,
-    securityContext: getSecurityContext(),
+    // securityContext: getSecurityContext(),
   );
   serverLocal.autoCompress = true;
   print(
