@@ -6,7 +6,7 @@ import 'package:redis_dart/redis_dart.dart';
 import 'utils.dart';
 import 'package:uuid/uuid.dart';
 
-const ACCESS_TOKEN_EXPIRY = Duration(minutes: 30);
+const ACCESS_TOKEN_EXPIRY = Duration(minutes: 5);
 const REFRESH_TOKEN_EXPIRY = Duration(days: 365);
 
 class Redis {
