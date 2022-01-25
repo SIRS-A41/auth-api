@@ -6,6 +6,8 @@ const SECRET = Env.secretKey;
 const ISSUER = Env.issuer;
 const CLIENT_ID = Env.clientId;
 const CLIENT_SECRET = Env.clientSecret;
+const LOCAL_CLIENT_ID = Env.localClientId;
+const LOCAL_CLIENT_SECRET = Env.localClientSecret;
 const REDIS_IP = Env.redisIp;
 
 late HttpServer server;
@@ -14,6 +16,7 @@ late Redis redis;
 late Router app;
 late Router appLocal;
 late String clientBase64;
+late String localClientBase64;
 
 SecurityContext getSecurityContext() {
   // Bind with a secure HTTPS connection
@@ -23,7 +26,7 @@ SecurityContext getSecurityContext() {
 
   return SecurityContext()
     ..useCertificateChain(chain)
-    ..usePrivateKey(key, password: '123123');
+    ..usePrivateKey(key, password: 'changeit');
 }
 
 void main(List<String> arguments) async {
@@ -34,6 +37,9 @@ void main(List<String> arguments) async {
 
   var bytes = utf8.encode('$CLIENT_ID:$CLIENT_SECRET');
   clientBase64 = base64.encode(bytes);
+
+  bytes = utf8.encode('$LOCAL_CLIENT_ID:$LOCAL_CLIENT_SECRET');
+  localClientBase64 = base64.encode(bytes);
 
   app = Router();
   appLocal = Router();
@@ -68,9 +74,9 @@ void main(List<String> arguments) async {
   serverLocal = await serve(
     handlerLocal,
     InternetAddress.anyIPv4,
-    8080,
-    // 8444,
-    // securityContext: getSecurityContext(),
+    // 8080,
+    8445,
+    securityContext: getSecurityContext(),
   );
   serverLocal.autoCompress = true;
   print(
@@ -102,6 +108,6 @@ void setupLocalRequests() {
         secret: SECRET,
         issuer: ISSUER,
         redis: redis,
-        clientBase64: clientBase64,
+        clientBase64: localClientBase64,
       ).router);
 }

@@ -5,7 +5,6 @@
 
 # Load variables
 # (test -f .env || touch .env) ; if [[ $(diff .env .env.tmp | wc -l) -ne 0 ]] ; then echo "Importing new ENV variables" ; mv .env.tmp .env ; pub run build_runner clean ; pub run build_runner build --delete-conflicting-outputs ; fi
-pub run build_runner clean ; pub run build_runner build --delete-conflicting-outputs 
 
 # Start HTTP server
 echo "Starting HTTP auth API server"
