@@ -29,13 +29,6 @@ packages:
       url: "https://pub.dartlang.org"
     source: hosted
     version: "2.7.0"
-  basic_utils:
-    dependency: transitive
-    description:
-      name: basic_utils
-      url: "https://pub.dartlang.org"
-    source: hosted
-    version: "3.1.0"
   boolean_selector:
     dependency: transitive
     description:
@@ -43,13 +36,6 @@ packages:
       url: "https://pub.dartlang.org"
     source: hosted
     version: "2.1.0"
-  bson:
-    dependency: transitive
-    description:
-      name: bson
-      url: "https://pub.dartlang.org"
-    source: hosted
-    version: "1.0.3"
   build:
     dependency: transitive
     description:
@@ -232,13 +218,6 @@ packages:
       url: "https://pub.dartlang.org"
     source: hosted
     version: "2.0.0"
-  http:
-    dependency: transitive
-    description:
-      name: http
-      url: "https://pub.dartlang.org"
-    source: hosted
-    version: "0.13.3"
   http_methods:
     dependency: transitive
     description:
@@ -309,20 +288,6 @@ packages:
       url: "https://pub.dartlang.org"
     source: hosted
     version: "1.0.0"
-  mongo_dart:
-    dependency: "direct main"
-    description:
-      name: mongo_dart
-      url: "https://pub.dartlang.org"
-    source: hosted
-    version: "0.7.0+2"
-  mongo_dart_query:
-    dependency: transitive
-    description:
-      name: mongo_dart_query
-      url: "https://pub.dartlang.org"
-    source: hosted
-    version: "1.0.1"
   node_preamble:
     dependency: transitive
     description:
@@ -379,13 +344,6 @@ packages:
       url: "https://pub.dartlang.org"
     source: hosted
     version: "1.0.0"
-  rational:
-    dependency: transitive
-    description:
-      name: rational
-      url: "https://pub.dartlang.org"
-    source: hosted
-    version: "1.2.1"
   redis_dart:
     dependency: "direct main"
     description:

@@ -61,7 +61,9 @@ class AuthLocalApi {
       if (userId == null) {
         return Response.forbidden('Not authorized to perform this action. 2');
       }
+      // check if the access token subject is a valid user
       if (await redis.hasUser(userId)) {
+        // return userId
         return Response.ok(userId);
       } else {
         return Response.forbidden('Not authorized to perform this action. 3');

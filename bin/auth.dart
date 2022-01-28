@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:auth_api/server.dart';
 
+// load variables from the .env file
 const SECRET = Env.secretKey;
 const ISSUER = Env.issuer;
 const CLIENT_ID = Env.clientId;
@@ -18,6 +19,7 @@ late Router appLocal;
 late String clientBase64;
 late String localClientBase64;
 
+// initiate TLS using self-signed certificate
 SecurityContext getSecurityContext() {
   // Bind with a secure HTTPS connection
   final chain =
@@ -31,13 +33,18 @@ SecurityContext getSecurityContext() {
 
 void main(List<String> arguments) async {
   print(ISSUER);
+
+  // establish connection to Redis instance
   redis = Redis(secret: SECRET, issuer: ISSUER);
   await redis.start(REDIS_IP, 6379);
   print('Token Service running...');
 
+  // encode client_id and client_secret for HTTP Basic authentication
   var bytes = utf8.encode('$CLIENT_ID:$CLIENT_SECRET');
   clientBase64 = base64.encode(bytes);
 
+  // encode client_id and client_secret for HTTP Basic authentication regarding the
+  //local auth API, used by the Resources API to validate token
   bytes = utf8.encode('$LOCAL_CLIENT_ID:$LOCAL_CLIENT_SECRET');
   localClientBase64 = base64.encode(bytes);
 
@@ -46,6 +53,9 @@ void main(List<String> arguments) async {
   setupRequests();
   setupLocalRequests();
 
+  // define pipeline
+  // handleAuth ensures that requests that do not pass the basic authentication
+  // are dropped
   final handler = Pipeline()
       .addMiddleware(logRequests())
       .addMiddleware(handleCors())
@@ -62,19 +72,16 @@ void main(List<String> arguments) async {
   server = await serve(
     handler,
     InternetAddress.anyIPv4,
-    // 8000,
     8443,
     securityContext: getSecurityContext(),
   );
   // Enable content compression
   server.autoCompress = true;
-
   print('Serving at https://${server.address.host}:${server.port}');
 
   serverLocal = await serve(
     handlerLocal,
     InternetAddress.anyIPv4,
-    // 8080,
     8445,
     // securityContext: getSecurityContext(),
   );
@@ -84,6 +91,7 @@ void main(List<String> arguments) async {
 }
 
 void setupRequests() {
+  // mount /auth requests
   app.mount(
       '/auth/',
       AuthApi(
@@ -93,6 +101,7 @@ void setupRequests() {
         clientBase64: clientBase64,
       ).router);
 
+  // used to test if everything is working
   app.get(
     '/hello',
     (Request request) async {
@@ -102,6 +111,7 @@ void setupRequests() {
 }
 
 void setupLocalRequests() {
+  // mount /auth requests used for validating access tokens
   appLocal.mount(
       '/auth/',
       AuthLocalApi(

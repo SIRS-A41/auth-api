@@ -36,10 +36,12 @@ class AuthApi {
         return Response(HttpStatus.badRequest,
             body: 'Please provide your username and password as body.');
       }
+      // gather values from the payload
       final userInfo = json.decode(payload);
       final username = userInfo['username'];
       final password = userInfo['password'];
 
+      // log request
       print(
           '${DateTime.now().toIso8601String()}\tusername: $username\tmethod: ${req.method}\turl: ${req.requestedUri}');
 
@@ -91,6 +93,7 @@ class AuthApi {
             body: 'Please provide your username and password.');
       }
 
+      // check if username and password are correct
       final userId = await redis.login(username, password);
       if (userId == null) {
         return Response(HttpStatus.badRequest,
@@ -100,6 +103,7 @@ class AuthApi {
           '${DateTime.now().toIso8601String()}\tuser: $userId\tmethod: ${req.method}\turl: ${req.requestedUri}');
 
       try {
+        // generate a token pair - access + refresh
         final tokenPair = await redis.generateTokenPair(userId);
         return Response.ok(json.encode(tokenPair.toJson()), headers: {
           HttpHeaders.contentTypeHeader: ContentType.json.mimeType,
@@ -147,6 +151,7 @@ class AuthApi {
               body: 'Refresh token is not valid.');
         }
 
+        // check if token is stored on the database
         final dbToken = await redis.getRefreshToken(tokenId);
         if (dbToken == null) {
           return Response(HttpStatus.badRequest,
@@ -207,6 +212,7 @@ class AuthApi {
               body: 'Refresh token is not valid.');
         }
 
+        // check if token is stored on the database
         final dbToken = await redis.getRefreshToken(tokenId);
         if (dbToken == null) {
           return Response(HttpStatus.badRequest,
@@ -214,7 +220,7 @@ class AuthApi {
         }
 
         // Generate new token pair - refresh access token
-        // also updates refresh token so relay attacks are avoided
+        // also updates the refresh token
         try {
           if (refreshToken.subject == null || refreshToken.payload == null) {
             return Response(HttpStatus.badRequest,
@@ -227,9 +233,11 @@ class AuthApi {
             return Response(HttpStatus.badRequest,
                 body: 'Refresh token is not valid');
           }
+          // get refreshToken expiry date
           final expiryDate = DateTime.fromMillisecondsSinceEpoch(
               (1000 * refreshToken.payload['exp']).round());
 
+          // generate new token pair
           final tokenPair = await redis.refreshAccessToken(
               refreshToken.subject!, refreshToken.jwtId!, expiryDate);
 

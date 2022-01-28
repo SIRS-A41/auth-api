@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'dart:math';
 
-import 'package:mongo_dart/mongo_dart.dart';
 import 'package:crypto/crypto.dart';
 import 'package:dart_jsonwebtoken/dart_jsonwebtoken.dart';
 
@@ -27,12 +26,14 @@ Middleware handleCors() {
   );
 }
 
+// generate randomly secure salt
 String generateSalt([int length = 32]) {
   final rand = Random.secure();
   final saltBytes = List<int>.generate(length, (_) => rand.nextInt(256));
   return base64.encode(saltBytes);
 }
 
+// hash password using SHA-512
 String hashPassword(String password, String salt) {
   final codec = Utf8Codec();
   final key = codec.encode(password);
@@ -42,6 +43,7 @@ String hashPassword(String password, String salt) {
   return digest.toString();
 }
 
+// generate JWT
 String generateJwt(
   String subject,
   String issuer,
@@ -51,17 +53,23 @@ String generateJwt(
 }) {
   final jwt = JWT(
     {
+      // store the timestamp of when it was issued
       'iat': DateTime.now().millisecondsSinceEpoch,
     },
+    // owner of access token
     subject: subject,
+    // issuers name
     issuer: issuer,
+    // id of token
     jwtId: jwtId,
   );
+  // sign JWT using secret and set expiry date
   return jwt.sign(SecretKey(secret), expiresIn: expiry);
 }
 
 JWT? verifyJwt(String token, String secret) {
   try {
+    // verify JWT token
     return JWT.verify(token, SecretKey(secret));
   } on JWTError catch (e) {
     // JWT package bug?
@@ -80,7 +88,9 @@ Middleware handleAuth(String secret) {
       final authHeader = request.headers['Authorization'];
       var client;
 
+      // check if request has Authorization header
       if (authHeader != null) {
+        // pass the client details
         if (authHeader.startsWith('Basic ')) {
           client = authHeader.substring(6);
         }
@@ -98,6 +108,7 @@ Middleware handleAuth(String secret) {
 Middleware checkAuthorization() {
   return createMiddleware(
     requestHandler: (Request request) {
+      // if no authorization was provided, reject request
       if (request.context['authDetails'] == null) {
         return Response.forbidden('Not authorized to perform this action.');
       }
@@ -117,50 +128,4 @@ Middleware logUserRequests() {
       return null;
     },
   );
-}
-
-Middleware logDbRequests() {
-  return createMiddleware(
-    requestHandler: (Request req) {
-      final userId = req.context['userId'];
-      final where = req.headers['where'];
-      final operation = req.headers['operator'];
-      final value = req.headers['value'];
-      final orderBy = req.headers['orderBy'];
-      final descending = req.headers['descending'];
-      final limit = req.headers['limit'];
-      var log =
-          '${DateTime.now().toIso8601String()}\tuser: $userId\t/${req.url}\t';
-      if (req.method == 'POST') {
-        log += 'WRITE';
-      } else {
-        log += 'READ\tParameters: {';
-        if (where != null && operation != null && value != null) {
-          log += 'where: $where$operation$value,';
-        }
-        if (orderBy != null) {
-          log += ' orderBy: $orderBy, descending: ${descending == 'true'},';
-        }
-        if (limit != null) {
-          log += ' limit: $limit';
-        }
-        log += '}';
-      }
-      print(log);
-      return null;
-    },
-  );
-}
-
-ObjectId parseUserId(JWT jwt) {
-  return ObjectId.fromHexString(jwt.subject ?? '');
-}
-
-dynamic parseValue(String? value) {
-  if (value == null) return null;
-  final number = num.tryParse(value);
-  if (number != null) return number;
-  if (value == 'true') return true;
-  if (value == 'false') return false;
-  return value;
 }
